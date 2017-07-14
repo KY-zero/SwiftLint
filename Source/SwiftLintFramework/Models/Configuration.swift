@@ -11,21 +11,6 @@ import SourceKittenFramework
 
 // swiftlint:disable file_length
 // The nested configuration part could probably be split up in another file
-
-private enum ConfigurationKey: String {
-    case cachePath = "cache_path"
-    case disabledRules = "disabled_rules"
-    case enabledRules = "enabled_rules" // deprecated in favor of optInRules
-    case excluded = "excluded"
-    case included = "included"
-    case optInRules = "opt_in_rules"
-    case reporter = "reporter"
-    case swiftlintVersion = "swiftlint_version"
-    case useNestedConfigs = "use_nested_configs" // deprecated
-    case warningThreshold = "warning_threshold"
-    case whitelistRules = "whitelist_rules"
-}
-
 public struct Configuration: Equatable {
     public static let fileName = ".swiftlint.yml"
     public let included: [String]             // included
@@ -86,9 +71,9 @@ public struct Configuration: Equatable {
             rules = configuredRules
         } else if !whitelistRules.isEmpty {
             if !disabledRules.isEmpty || !optInRules.isEmpty {
-                queuedPrintError("'\(ConfigurationKey.disabledRules.rawValue)' or " +
-                    "'\(ConfigurationKey.optInRules.rawValue)' cannot be used in combination " +
-                    "with '\(ConfigurationKey.whitelistRules.rawValue)'")
+                queuedPrintError("'\(Key.disabledRules.rawValue)' or " +
+                    "'\(Key.optInRules.rawValue)' cannot be used in combination " +
+                    "with '\(Key.whitelistRules.rawValue)'")
                 return nil
             }
 
@@ -138,21 +123,25 @@ public struct Configuration: Equatable {
 
     public init?(dict: [String: Any], ruleList: RuleList = masterRuleList, enableAllRules: Bool = false,
                  cachePath: String? = nil) {
+        func defaultStringArray(_ object: Any?) -> [String] {
+            return [String].array(of: object) ?? []
+        }
+
         // Use either new 'opt_in_rules' or deprecated 'enabled_rules' for now.
         let optInRules = defaultStringArray(
-            dict[ConfigurationKey.optInRules.rawValue] ?? dict[ConfigurationKey.enabledRules.rawValue]
+            dict[Key.optInRules.rawValue] ?? dict[Key.enabledRules.rawValue]
         )
 
         // Log an error when supplying invalid keys in the configuration dictionary
-        let invalidKeys = Set(dict.keys).subtracting(validKeys(ruleList: ruleList))
+        let invalidKeys = Set(dict.keys).subtracting(Configuration.validKeys(ruleList: ruleList))
         if !invalidKeys.isEmpty {
             queuedPrintError("Configuration contains invalid keys:\n\(invalidKeys)")
         }
 
-        let disabledRules = defaultStringArray(dict[ConfigurationKey.disabledRules.rawValue])
-        let whitelistRules = defaultStringArray(dict[ConfigurationKey.whitelistRules.rawValue])
-        let included = defaultStringArray(dict[ConfigurationKey.included.rawValue])
-        let excluded = defaultStringArray(dict[ConfigurationKey.excluded.rawValue])
+        let disabledRules = defaultStringArray(dict[Key.disabledRules.rawValue])
+        let whitelistRules = defaultStringArray(dict[Key.whitelistRules.rawValue])
+        let included = defaultStringArray(dict[Key.included.rawValue])
+        let excluded = defaultStringArray(dict[Key.excluded.rawValue])
 
         warnAboutDeprecations(configurationDictionary: dict, disabledRules: disabledRules, optInRules: optInRules,
                               whitelistRules: whitelistRules, ruleList: ruleList)
@@ -175,13 +164,13 @@ public struct Configuration: Equatable {
                   whitelistRules: whitelistRules,
                   included: included,
                   excluded: excluded,
-                  warningThreshold: dict[ConfigurationKey.warningThreshold.rawValue] as? Int,
-                  reporter: dict[ConfigurationKey.reporter.rawValue] as? String ??
+                  warningThreshold: dict[Key.warningThreshold.rawValue] as? Int,
+                  reporter: dict[Key.reporter.rawValue] as? String ??
                     XcodeReporter.identifier,
                   ruleList: ruleList,
                   configuredRules: configuredRules,
-                  swiftlintVersion: dict[ConfigurationKey.swiftlintVersion.rawValue] as? String,
-                  cachePath: cachePath ?? dict[ConfigurationKey.cachePath.rawValue] as? String)
+                  swiftlintVersion: dict[Key.swiftlintVersion.rawValue] as? String,
+                  cachePath: cachePath ?? dict[Key.cachePath.rawValue] as? String)
     }
 
     public init(path: String = Configuration.fileName, rootPath: String? = nil,
@@ -283,26 +272,6 @@ private func containsDuplicateIdentifiers(_ identifiers: [String]) -> Bool {
     return false
 }
 
-private func defaultStringArray(_ object: Any?) -> [String] {
-    return [String].array(of: object) ?? []
-}
-
-private func validKeys(ruleList: RuleList) -> [String] {
-    return [
-        ConfigurationKey.cachePath,
-        .disabledRules,
-        .enabledRules,
-        .excluded,
-        .included,
-        .optInRules,
-        .reporter,
-        .swiftlintVersion,
-        .useNestedConfigs,
-        .warningThreshold,
-        .whitelistRules
-    ].map({ $0.rawValue }) + ruleList.allValidIdentifiers()
-}
-
 private func warnAboutDeprecations(configurationDictionary dict: [String: Any],
                                    disabledRules: [String] = [],
                                    optInRules: [String] = [],
@@ -310,15 +279,15 @@ private func warnAboutDeprecations(configurationDictionary dict: [String: Any],
                                    ruleList: RuleList) {
 
     // Deprecation warning for "enabled_rules"
-    if dict[ConfigurationKey.enabledRules.rawValue] != nil {
-        queuedPrintError("'\(ConfigurationKey.enabledRules.rawValue)' has been renamed to " +
-            "'\(ConfigurationKey.optInRules.rawValue)' and will be completely removed in a " +
+    if dict[Configuration.Key.enabledRules.rawValue] != nil {
+        queuedPrintError("'\(Configuration.Key.enabledRules.rawValue)' has been renamed to " +
+            "'\(Configuration.Key.optInRules.rawValue)' and will be completely removed in a " +
             "future release.")
     }
 
     // Deprecation warning for "use_nested_configs"
-    if dict[ConfigurationKey.useNestedConfigs.rawValue] != nil {
-        queuedPrintError("Support for '\(ConfigurationKey.useNestedConfigs.rawValue)' has " +
+    if dict[Configuration.Key.useNestedConfigs.rawValue] != nil {
+        queuedPrintError("Support for '\(Configuration.Key.useNestedConfigs.rawValue)' has " +
             "been deprecated and its value is now ignored. Nested configuration files are " +
             "now always considered.")
     }
@@ -342,46 +311,6 @@ private func warnAboutDeprecations(configurationDictionary dict: [String: Any],
 // MARK: - Nested Configurations Extension
 
 extension Configuration {
-    fileprivate func configuration(forPath path: String) -> Configuration {
-        if path == rootPath {
-            return self
-        }
-
-        let pathNSString = path.bridge()
-        let configurationSearchPath = pathNSString.appendingPathComponent(Configuration.fileName)
-
-        // If a configuration exists and it isn't us, load and merge the configurations
-        if configurationSearchPath != configurationPath &&
-            FileManager.default.fileExists(atPath: configurationSearchPath) {
-            let fullPath = pathNSString.absolutePathRepresentation()
-            let config = Configuration.getCached(atPath: fullPath) ??
-                Configuration(path: configurationSearchPath, rootPath: rootPath, optional: false, quiet: true)
-            return merge(with: config)
-        }
-
-        // If we are not at the root path, continue down the tree
-        if path != rootPath && path != "/" {
-            return configuration(forPath: pathNSString.deletingLastPathComponent)
-        }
-
-        // If nothing else, return self
-        return self
-    }
-
-    private struct HashableRule: Hashable {
-        let rule: Rule
-
-        static func == (lhs: HashableRule, rhs: HashableRule) -> Bool {
-            // Don't use `isEqualTo` in case its internal implementation changes from
-            // using the identifier to something else, which could mess up with the `Set`
-            return type(of: lhs.rule).description.identifier == type(of: rhs.rule).description.identifier
-        }
-
-        var hashValue: Int {
-            return type(of: rule).description.identifier.hashValue
-        }
-    }
-
     internal func merge(with configuration: Configuration) -> Configuration {
         var rules: [Rule] = []
         if !configuration.whitelistRules.isEmpty {
