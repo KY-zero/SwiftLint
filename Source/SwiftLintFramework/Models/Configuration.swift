@@ -107,15 +107,15 @@ public struct Configuration: Equatable {
                   cachePath: cachePath)
     }
 
-    internal init(disabledRules: [String] = [],
-                  optInRules: [String] = [],
-                  whitelistRules: [String] = [],
-                  included: [String] = [],
-                  excluded: [String] = [],
-                  warningThreshold: Int? = nil,
+    internal init(disabledRules: [String],
+                  optInRules: [String],
+                  whitelistRules: [String],
+                  included: [String],
+                  excluded: [String],
+                  warningThreshold: Int?,
                   reporter: String,
-                  rules: [Rule] = [],
-                  cachePath: String? = nil,
+                  rules: [Rule],
+                  cachePath: String?,
                   rootPath: String? = nil) {
 
         self.disabledRules = disabledRules

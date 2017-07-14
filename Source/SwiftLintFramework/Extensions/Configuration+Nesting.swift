@@ -90,6 +90,7 @@ extension Configuration {
         return Configuration(
             disabledRules: [],
             optInRules: [],
+            whitelistRules: [],
             included: configuration.included, // Always use the nested included directories
             excluded: configuration.excluded, // Always use the nested excluded directories
             // The minimum warning threshold if both exist, otherwise the nested,
