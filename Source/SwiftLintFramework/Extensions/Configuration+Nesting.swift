@@ -83,7 +83,7 @@ extension Configuration {
             rules = ruleSet.map { $0.rule }
         }
 
-        var nestedConfiguration = Configuration(
+        return Configuration(
             disabledRules: [],
             optInRules: [],
             included: configuration.included, // Always use the nested included directories
@@ -95,8 +95,8 @@ extension Configuration {
             } ?? configuration.warningThreshold,
             reporter: reporter, // Always use the parent reporter
             rules: rules,
-            cachePath: cachePath) // Always use the parent cache path
-        nestedConfiguration.rootPath = configuration.rootPath
-        return nestedConfiguration
+            cachePath: cachePath, // Always use the parent cache path
+            rootPath: configuration.rootPath
+        )
     }
 }

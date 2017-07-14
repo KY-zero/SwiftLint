@@ -115,7 +115,8 @@ public struct Configuration: Equatable {
                   warningThreshold: Int? = nil,
                   reporter: String,
                   rules: [Rule] = [],
-                  cachePath: String? = nil) {
+                  cachePath: String? = nil,
+                  rootPath: String? = nil) {
 
         self.disabledRules = disabledRules
         self.optInRules = optInRules
@@ -125,6 +126,7 @@ public struct Configuration: Equatable {
         self.reporter = reporter
         self.cachePath = cachePath
         self.rules = rules
+        self.rootPath = rootPath
 
         // set the config threshold to the threshold provided in the config file
         self.warningThreshold = warningThreshold
