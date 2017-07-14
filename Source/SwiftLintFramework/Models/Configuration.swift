@@ -11,17 +11,18 @@ import SourceKittenFramework
 
 public struct Configuration: Equatable {
     public static let fileName = ".swiftlint.yml"
-    public let included: [String]             // included
-    public let excluded: [String]             // excluded
-    public let reporter: String               // reporter (xcode, json, csv, checkstyle)
-    public var warningThreshold: Int?         // warning threshold
+    public let included: [String]         // included
+    public let excluded: [String]         // excluded
+    public let reporter: String           // reporter (xcode, json, csv, checkstyle)
+    public var warningThreshold: Int?     // warning threshold
+    public var rootPath: String?          // the root path to search for nested configurations
+    public var configurationPath: String? // if successfully loaded from a path
+    public let cachePath: String?
+
+    public let rules: [Rule]
     internal let disabledRules: [String]
     internal let optInRules: [String]
     internal let whitelistRules: [String]
-    public let rules: [Rule]
-    public var rootPath: String?              // the root path to search for nested configurations
-    public var configurationPath: String?     // if successfully loaded from a path
-    public let cachePath: String?
 
     public init?(disabledRules: [String] = [],
                  optInRules: [String] = [],
@@ -158,6 +159,15 @@ public struct Configuration: Equatable {
         setCached(atPath: fullPath)
     }
 
+    public static func == (lhs: Configuration, rhs: Configuration) -> Bool {
+        return (lhs.excluded == rhs.excluded) &&
+            (lhs.included == rhs.included) &&
+            (lhs.reporter == rhs.reporter) &&
+            (lhs.configurationPath == rhs.configurationPath) &&
+            (lhs.rootPath == lhs.rootPath) &&
+            (lhs.rules == rhs.rules)
+    }
+
     public func lintablePaths(inPath path: String, fileManager: LintableFileManager = FileManager.default) -> [String] {
         // If path is a Swift file, skip filtering with excluded/included paths
         if path.bridge().isSwiftFile() && path.isFile {
@@ -208,15 +218,4 @@ private func containsDuplicateIdentifiers(_ identifiers: [String]) -> Bool {
         "configuration error: '\(rule.0)' is listed \(rule.1) times"
     }.joined(separator: "\n"))
     return true
-}
-
-// Mark - == Implementation
-
-public func == (lhs: Configuration, rhs: Configuration) -> Bool {
-    return (lhs.excluded == rhs.excluded) &&
-           (lhs.included == rhs.included) &&
-           (lhs.reporter == rhs.reporter) &&
-           (lhs.configurationPath == rhs.configurationPath) &&
-           (lhs.rootPath == lhs.rootPath) &&
-           (lhs.rules == rhs.rules)
 }
