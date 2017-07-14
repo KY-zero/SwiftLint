@@ -56,35 +56,37 @@ extension Configuration {
         }
     }
 
-    internal func merge(with configuration: Configuration) -> Configuration {
-        var rules: [Rule] = []
-
-        if !configuration.whitelistRules.isEmpty {
+    private func mergingRules(with configuration: Configuration) -> [Rule] {
+        guard configuration.whitelistRules.isEmpty else {
             // Use an intermediate set to filter out duplicate rules when merging configurations
             // (always use the nested rule first if it exists)
-            var ruleSet = Set<HashableRule>(configuration.rules.map(HashableRule.init))
-            ruleSet.formUnion(rules.map(HashableRule.init))
-            rules = ruleSet.map { $0.rule }.filter { rule in
-                return configuration.whitelistRules.contains(type(of: rule).description.identifier)
-            }
-        } else {
-            // Same here
-            var ruleSet = Set<HashableRule>(configuration.rules
+            return Set(configuration.rules.map(HashableRule.init))
+                .union(rules.map(HashableRule.init))
+                .map { $0.rule }
+                .filter { rule in
+                    return configuration.whitelistRules.contains(type(of: rule).description.identifier)
+                }
+        }
+
+        // Same here
+        return Set(
+            configuration.rules
                 // Enable rules that are opt-in by the nested configuration
                 .filter { rule in
                     return configuration.optInRules.contains(type(of: rule).description.identifier)
                 }
                 .map(HashableRule.init)
-            )
-            // And disable rules that are disabled by the nested configuration
-            ruleSet.formUnion(self.rules
-                .filter { rule in
-                    return !configuration.disabledRules.contains(type(of: rule).description.identifier)
-                }.map(HashableRule.init)
-            )
-            rules = ruleSet.map { $0.rule }
-        }
+        )
+        // And disable rules that are disabled by the nested configuration
+        .union(
+            rules.filter { rule in
+                return !configuration.disabledRules.contains(type(of: rule).description.identifier)
+            }.map(HashableRule.init)
+        )
+        .map { $0.rule }
+    }
 
+    internal func merge(with configuration: Configuration) -> Configuration {
         return Configuration(
             disabledRules: [],
             optInRules: [],
@@ -96,7 +98,7 @@ extension Configuration {
                 return min(configuration.warningThreshold ?? .max, warningThreshold)
             } ?? configuration.warningThreshold,
             reporter: reporter, // Always use the parent reporter
-            rules: rules,
+            rules: mergingRules(with: configuration),
             cachePath: cachePath, // Always use the parent cache path
             rootPath: configuration.rootPath
         )
