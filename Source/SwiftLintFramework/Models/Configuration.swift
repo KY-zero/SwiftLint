@@ -9,8 +9,6 @@
 import Foundation
 import SourceKittenFramework
 
-// swiftlint:disable file_length
-// The nested configuration part could probably be split up in another file
 public struct Configuration: Equatable {
     public static let fileName = ".swiftlint.yml"
     public let included: [String]             // included
@@ -121,58 +119,6 @@ public struct Configuration: Equatable {
         self.warningThreshold = warningThreshold
     }
 
-    public init?(dict: [String: Any], ruleList: RuleList = masterRuleList, enableAllRules: Bool = false,
-                 cachePath: String? = nil) {
-        func defaultStringArray(_ object: Any?) -> [String] {
-            return [String].array(of: object) ?? []
-        }
-
-        // Use either new 'opt_in_rules' or deprecated 'enabled_rules' for now.
-        let optInRules = defaultStringArray(
-            dict[Key.optInRules.rawValue] ?? dict[Key.enabledRules.rawValue]
-        )
-
-        // Log an error when supplying invalid keys in the configuration dictionary
-        let invalidKeys = Set(dict.keys).subtracting(Configuration.validKeys(ruleList: ruleList))
-        if !invalidKeys.isEmpty {
-            queuedPrintError("Configuration contains invalid keys:\n\(invalidKeys)")
-        }
-
-        let disabledRules = defaultStringArray(dict[Key.disabledRules.rawValue])
-        let whitelistRules = defaultStringArray(dict[Key.whitelistRules.rawValue])
-        let included = defaultStringArray(dict[Key.included.rawValue])
-        let excluded = defaultStringArray(dict[Key.excluded.rawValue])
-
-        warnAboutDeprecations(configurationDictionary: dict, disabledRules: disabledRules, optInRules: optInRules,
-                              whitelistRules: whitelistRules, ruleList: ruleList)
-
-        let configuredRules: [Rule]
-        do {
-            configuredRules = try ruleList.configuredRules(with: dict)
-        } catch RuleListError.duplicatedConfigurations(let ruleType) {
-            let aliases = ruleType.description.deprecatedAliases.map { "'\($0)'" }.joined(separator: ", ")
-            let identifier = ruleType.description.identifier
-            queuedPrintError("Multiple configurations found for '\(identifier)'. Check for any aliases: \(aliases).")
-            return nil
-        } catch {
-            return nil
-        }
-
-        self.init(disabledRules: disabledRules,
-                  optInRules: optInRules,
-                  enableAllRules: enableAllRules,
-                  whitelistRules: whitelistRules,
-                  included: included,
-                  excluded: excluded,
-                  warningThreshold: dict[Key.warningThreshold.rawValue] as? Int,
-                  reporter: dict[Key.reporter.rawValue] as? String ??
-                    XcodeReporter.identifier,
-                  ruleList: ruleList,
-                  configuredRules: configuredRules,
-                  swiftlintVersion: dict[Key.swiftlintVersion.rawValue] as? String,
-                  cachePath: cachePath ?? dict[Key.cachePath.rawValue] as? String)
-    }
-
     public init(path: String = Configuration.fileName, rootPath: String? = nil,
                 optional: Bool = true, quiet: Bool = false, enableAllRules: Bool = false, cachePath: String? = nil) {
         let fullPath: String
@@ -228,7 +174,7 @@ public struct Configuration: Equatable {
     }
 
     public func lintableFiles(inPath path: String) -> [File] {
-        return lintablePaths(inPath: path).flatMap { File(path: $0) }
+        return lintablePaths(inPath: path).flatMap(File.init(path:))
     }
 }
 
@@ -263,42 +209,6 @@ private func containsDuplicateIdentifiers(_ identifiers: [String]) -> Bool {
     }
 
     return false
-}
-
-private func warnAboutDeprecations(configurationDictionary dict: [String: Any],
-                                   disabledRules: [String] = [],
-                                   optInRules: [String] = [],
-                                   whitelistRules: [String] = [],
-                                   ruleList: RuleList) {
-
-    // Deprecation warning for "enabled_rules"
-    if dict[Configuration.Key.enabledRules.rawValue] != nil {
-        queuedPrintError("'\(Configuration.Key.enabledRules.rawValue)' has been renamed to " +
-            "'\(Configuration.Key.optInRules.rawValue)' and will be completely removed in a " +
-            "future release.")
-    }
-
-    // Deprecation warning for "use_nested_configs"
-    if dict[Configuration.Key.useNestedConfigs.rawValue] != nil {
-        queuedPrintError("Support for '\(Configuration.Key.useNestedConfigs.rawValue)' has " +
-            "been deprecated and its value is now ignored. Nested configuration files are " +
-            "now always considered.")
-    }
-
-    // Deprecation warning for rules
-    let deprecatedRulesIdentifiers = ruleList.list.flatMap { (identifier, rule) -> [(String, String)] in
-        return rule.description.deprecatedAliases.map { ($0, identifier) }
-    }
-
-    let userProvidedRuleIDs = Set(disabledRules + optInRules + whitelistRules)
-    let deprecatedUsages = deprecatedRulesIdentifiers.filter { deprecatedIdentifier, _ in
-        return dict[deprecatedIdentifier] != nil || userProvidedRuleIDs.contains(deprecatedIdentifier)
-    }
-
-    for (deprecatedIdentifier, identifier) in deprecatedUsages {
-        queuedPrintError("'\(deprecatedIdentifier)' rule has been renamed to '\(identifier)' and will be " +
-            "completely removed in a future release.")
-    }
 }
 
 // Mark - == Implementation
