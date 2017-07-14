@@ -10,7 +10,11 @@ import Foundation
 import SourceKittenFramework
 
 public struct Configuration: Equatable {
+
+    // MARK: Properties
+
     public static let fileName = ".swiftlint.yml"
+
     public let included: [String]         // included
     public let excluded: [String]         // excluded
     public let reporter: String           // reporter (xcode, json, csv, checkstyle)
@@ -19,10 +23,16 @@ public struct Configuration: Equatable {
     public var configurationPath: String? // if successfully loaded from a path
     public let cachePath: String?
 
+    // MARK: Rules Properties
+
+    // All rules enabled in this configuration, derived from disabled, opt-in and whitelist rules
     public let rules: [Rule]
+
     internal let disabledRules: [String]
     internal let optInRules: [String]
     internal let whitelistRules: [String]
+
+    // MARK: Initializers
 
     public init?(disabledRules: [String] = [],
                  optInRules: [String] = [],
@@ -159,6 +169,8 @@ public struct Configuration: Equatable {
         setCached(atPath: fullPath)
     }
 
+    // MARK: Equatable
+
     public static func == (lhs: Configuration, rhs: Configuration) -> Bool {
         return (lhs.excluded == rhs.excluded) &&
             (lhs.included == rhs.included) &&
@@ -168,7 +180,14 @@ public struct Configuration: Equatable {
             (lhs.rules == rhs.rules)
     }
 
-    public func lintablePaths(inPath path: String, fileManager: LintableFileManager = FileManager.default) -> [String] {
+    // MARK: Lintable Files
+
+    public func lintableFiles(inPath path: String) -> [File] {
+        return lintablePaths(inPath: path).flatMap(File.init(path:))
+    }
+
+    internal func lintablePaths(inPath path: String,
+                                fileManager: LintableFileManager = FileManager.default) -> [String] {
         // If path is a Swift file, skip filtering with excluded/included paths
         if path.bridge().isSwiftFile() && path.isFile {
             return [path]
@@ -182,11 +201,9 @@ public struct Configuration: Equatable {
         }
         return (pathsForPath + includedPaths).filter({ !excludedPaths.contains($0) })
     }
-
-    public func lintableFiles(inPath path: String) -> [File] {
-        return lintablePaths(inPath: path).flatMap(File.init(path:))
-    }
 }
+
+// MARK: Identifier Validation
 
 private func validateRuleIdentifiers(configuredRules: [Rule], disabledRules: [String]) -> [String] {
     // Validate that all rule identifiers map to a defined rule
