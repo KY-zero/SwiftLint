@@ -74,12 +74,14 @@ extension Configuration {
                 .filter { rule in
                     return configuration.optInRules.contains(type(of: rule).description.identifier)
                 }
-                .map(HashableRule.init))
+                .map(HashableRule.init)
+            )
             // And disable rules that are disabled by the nested configuration
             ruleSet.formUnion(self.rules
                 .filter { rule in
                     return !configuration.disabledRules.contains(type(of: rule).description.identifier)
-                }.map(HashableRule.init))
+                }.map(HashableRule.init)
+            )
             rules = ruleSet.map { $0.rule }
         }
 
